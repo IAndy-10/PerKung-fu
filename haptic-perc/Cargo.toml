@@ -1,0 +1,16 @@
+[package]
+name = "haptic-perc"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clack-plugin = { path = "../clack/plugin" }
+clack-extensions = { path = "../clack/extensions", features = [
+    "audio-ports",
+    "note-ports",
+    "params",
+    "clack-plugin",
+] }

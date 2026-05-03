@@ -1,0 +1,13 @@
+# Rust build artifacts
+target/
+haptic-perc/target/
+
+# Editor
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# clack and clap are reference repos, not our source
+clack/
+clap/

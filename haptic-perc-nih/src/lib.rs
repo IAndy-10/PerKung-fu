@@ -6,6 +6,7 @@
 // frequency ratios. See dsp.rs and the Chalmers 2005 paper for details.
 
 use nih_plug::prelude::*;
+use nih_plug_egui::{create_egui_editor, egui, widgets, EguiState};
 use std::sync::Arc;
 
 mod dsp;
@@ -31,6 +32,10 @@ impl Default for HapticPercNih {
 
 #[derive(Params)]
 struct HapticPercParams {
+    /// Persisted editor window state (size, open/closed).
+    #[persist = "editor-state"]
+    editor_state: Arc<EguiState>,
+
     /// Semitone offset applied to the incoming MIDI note pitch.
     #[id = "tuning"]
     pub tuning: FloatParam,
@@ -68,6 +73,8 @@ struct HapticPercParams {
 impl Default for HapticPercParams {
     fn default() -> Self {
         Self {
+            editor_state: EguiState::from_size(380, 300),
+
             tuning: FloatParam::new(
                 "Tuning",
                 0.0,
@@ -170,6 +177,58 @@ impl Plugin for HapticPercNih {
 
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
+    }
+
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params = self.params.clone();
+        create_egui_editor(
+            self.params.editor_state.clone(),
+            (),
+            |_, _| {},
+            move |ctx, setter, _state| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui.heading("Haptic Perc");
+                    ui.separator();
+                    egui::Grid::new("params")
+                        .num_columns(2)
+                        .spacing([12.0, 6.0])
+                        .striped(true)
+                        .show(ui, |ui| {
+                            ui.label("Tuning");
+                            ui.add(widgets::ParamSlider::for_param(&params.tuning, setter));
+                            ui.end_row();
+
+                            ui.label("Decay");
+                            ui.add(widgets::ParamSlider::for_param(&params.decay, setter));
+                            ui.end_row();
+
+                            ui.label("Damp");
+                            ui.add(widgets::ParamSlider::for_param(&params.damp, setter));
+                            ui.end_row();
+
+                            ui.label("Strike");
+                            ui.add(widgets::ParamSlider::for_param(&params.strike, setter));
+                            ui.end_row();
+
+                            ui.label("Attenuation");
+                            ui.add(widgets::ParamSlider::for_param(&params.atten, setter));
+                            ui.end_row();
+
+                            ui.label("L/Cut");
+                            ui.add(widgets::ParamSlider::for_param(&params.lcut, setter));
+                            ui.end_row();
+
+                            ui.label("Mic Gain");
+                            ui.add(widgets::ParamSlider::for_param(&params.mic_gain, setter));
+                            ui.end_row();
+
+                            ui.label("Out Gain");
+                            ui.add(widgets::ParamSlider::for_param(&params.out_gain, setter));
+                            ui.end_row();
+                        });
+                });
+            },
+        )
     }
 
     fn initialize(

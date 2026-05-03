@@ -20,3 +20,4 @@ standalone = ["nih_plug/standalone"]
 
 [dependencies]
 nih_plug = { path = "../nih-plug" }
+nih_plug_egui = { path = "../nih-plug/nih_plug_egui" }

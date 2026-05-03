@@ -8,6 +8,7 @@ haptic-perc/target/
 .vscode/
 .idea/
 
-# clack and clap are reference repos, not our source
+# clack, clap, and nih-plug are reference repos, not our source
 clack/
 clap/
+nih-plug/

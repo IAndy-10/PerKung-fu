@@ -1,6 +1,8 @@
 # Rust build artifacts
 target/
 haptic-perc/target/
+build/
+dist/
 
 # Editor
 .DS_Store

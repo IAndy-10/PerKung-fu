@@ -3,6 +3,7 @@ target/
 haptic-perc/target/
 build/
 dist/
+docs/
 
 # Editor
 .DS_Store

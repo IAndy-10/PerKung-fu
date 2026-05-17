@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "DrumVoice.h"
+#include "DSP/DrumVoice.h"
 #include "ParameterIDs.h"
 
 // Detects transient onsets from a contact mic signal.
@@ -9,10 +9,10 @@
 struct OnsetDetector
 {
     int   cooldown   = 0;
-    float hpState    = 0.0f;   // HPF memory
-    float peakHold   = 0.0f;   // running peak in current window
-    int   windowSamp = 0;      // samples counted in window
-    int   windowSize = 0;      // 3ms window size in samples
+    float hpState    = 0.0f;
+    float peakHold   = 0.0f;
+    int   windowSamp = 0;
+    int   windowSize = 0;
 
     void reset()
     {
@@ -24,10 +24,8 @@ struct OnsetDetector
     }
 
     // Returns velocity [0,1] when an onset is detected, else -1.
-    // Call once per sample. sampleRate must be passed every block.
     float process (float sample, float thresholdLin, float sampleRate)
     {
-        // Update window size lazily (handles SR changes)
         int newWin = static_cast<int> (sampleRate * 0.003f); // 3 ms
         if (newWin != windowSize)
         {
@@ -36,12 +34,10 @@ struct OnsetDetector
             peakHold   = 0.0f;
         }
 
-        // 1. High-pass filter ~100 Hz via first-difference (y = x[n] - x[n-1])
-        //    Effective fc ≈ sr / (2π·tau) which removes DC and sub-100Hz rumble.
+        // High-pass via first-difference — removes DC and sub-100 Hz rumble
         float hpOut = sample - hpState;
         hpState = sample;
 
-        // 2. Accumulate peak over window
         float absHp = std::abs (hpOut);
         peakHold = std::max (peakHold, absHp);
         ++windowSamp;
@@ -49,7 +45,6 @@ struct OnsetDetector
         if (windowSamp < windowSize)
             return -1.0f;
 
-        // Window complete — evaluate
         float peak = peakHold;
         peakHold   = 0.0f;
         windowSamp = 0;
@@ -70,12 +65,11 @@ struct OnsetDetector
     }
 };
 
-class HapticPercProcessor : public juce::AudioProcessor
+class PerKungFuProcessor : public juce::AudioProcessor
 {
 public:
-    HapticPercProcessor();
+    PerKungFuProcessor();
 
-    // AudioProcessor interface
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
@@ -83,7 +77,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
 
-    const juce::String getName() const override { return "Haptic Perc"; }
+    const juce::String getName() const override { return "PerKung-fu"; }
     bool   acceptsMidi()  const override { return true; }
     bool   producesMidi() const override { return false; }
     bool   isMidiEffect() const override { return false; }
@@ -109,5 +103,5 @@ private:
     DrumVoice     voice;
     OnsetDetector onset;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HapticPercProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PerKungFuProcessor)
 };

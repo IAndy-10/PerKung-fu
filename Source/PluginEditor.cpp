@@ -2,18 +2,18 @@
 #include "ParameterIDs.h"
 
 static const std::pair<juce::ParameterID, const char*> PARAM_ROWS[] = {
-    { ParamID::Tuning,     "Tuning"      },
-    { ParamID::Decay,      "Decay"       },
-    { ParamID::Damp,       "Damp"        },
-    { ParamID::Strike,     "Strike"      },
-    { ParamID::Atten,      "Attenuation" },
-    { ParamID::LCut,       "L/Cut"       },
-    { ParamID::MicGain,    "Mic Gain"    },
-    { ParamID::OutGain,    "Out Gain"    },
-    { ParamID::Threshold,  "Threshold"   },
+    { ParamID::Tuning,    "Tuning"      },
+    { ParamID::Decay,     "Decay"       },
+    { ParamID::Damp,      "Damp"        },
+    { ParamID::Strike,    "Strike"      },
+    { ParamID::Atten,     "Attenuation" },
+    { ParamID::LCut,      "L/Cut"       },
+    { ParamID::MicGain,   "Mic Gain"    },
+    { ParamID::OutGain,   "Out Gain"    },
+    { ParamID::Threshold, "Threshold"   },
 };
 
-HapticPercEditor::HapticPercEditor (HapticPercProcessor& p)
+PerKungFuEditor::PerKungFuEditor (PerKungFuProcessor& p)
     : AudioProcessorEditor (p), processor (p)
 {
     for (int i = 0; i < 9; ++i)
@@ -36,14 +36,14 @@ HapticPercEditor::HapticPercEditor (HapticPercProcessor& p)
     startTimerHz (30);
 }
 
-void HapticPercEditor::paint (juce::Graphics& g)
+void PerKungFuEditor::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff1e1e2e));
 
     // Title
     g.setColour (juce::Colour (0xffcdd6f4));
     g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
-    g.drawText ("Haptic Perc", getLocalBounds().removeFromTop (36),
+    g.drawText ("PerKung-fu", getLocalBounds().removeFromTop (36),
                 juce::Justification::centred, false);
 
     // Separator above threshold row
@@ -51,7 +51,7 @@ void HapticPercEditor::paint (juce::Graphics& g)
     g.setColour (juce::Colour (0xff45475a));
     g.drawHorizontalLine (sepY, 12.0f, (float) getWidth() - 12.0f);
 
-    // Input level meter at the bottom (uses ballistics-smoothed meterLevel)
+    // Input level meter
     auto meterArea = getLocalBounds().removeFromBottom (14).reduced (12, 2);
     g.setColour (juce::Colour (0xff313244));
     g.fillRect (meterArea);
@@ -62,11 +62,11 @@ void HapticPercEditor::paint (juce::Graphics& g)
     g.drawText ("IN", meterArea, juce::Justification::centredLeft, false);
 }
 
-void HapticPercEditor::resized()
+void PerKungFuEditor::resized()
 {
     auto area = getLocalBounds().reduced (12);
-    area.removeFromBottom (14); // meter
-    area.removeFromTop (36);    // title
+    area.removeFromBottom (14);
+    area.removeFromTop (36);
 
     const int rowH   = 28;
     const int labelW = 90;

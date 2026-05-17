@@ -2,11 +2,11 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-class HapticPercEditor : public juce::AudioProcessorEditor,
+class PerKungFuEditor : public juce::AudioProcessorEditor,
                         private juce::Timer
 {
 public:
-    explicit HapticPercEditor (HapticPercProcessor&);
+    explicit PerKungFuEditor (PerKungFuProcessor&);
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -16,13 +16,13 @@ private:
     {
         float target = processor.inputLevel.load (std::memory_order_relaxed);
         if (target >= meterLevel)
-            meterLevel = target;                    // instant attack
+            meterLevel = target;
         else
-            meterLevel *= 0.85f;                    // ~10 dB/s decay at 30 Hz
+            meterLevel *= 0.85f;
         repaint();
     }
 
-    HapticPercProcessor& processor;
+    PerKungFuProcessor& processor;
     float meterLevel = 0.0f;
 
     struct ParamRow
@@ -34,5 +34,5 @@ private:
 
     std::array<ParamRow, 9> rows;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HapticPercEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PerKungFuEditor)
 };

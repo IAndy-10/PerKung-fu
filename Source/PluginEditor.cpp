@@ -1,5 +1,66 @@
+// Apple frameworks MUST come before JUCE headers — juce::Point shadows Carbon's Point (Finder.h:248)
+#if defined(__APPLE__)
+#import <WebKit/WebKit.h>
+#import <AVFoundation/AVFoundation.h>
+#endif
+
 #include "PluginEditor.h"
 #include "ParameterIDs.h"
+
+// ── macOS: enable navigator.mediaDevices on file:// origins inside WKWebView ──
+#if JUCE_MAC
+
+@interface JuceCameraDelegate : NSObject <WKUIDelegate>
+@end
+@implementation JuceCameraDelegate
+- (void)webView:(WKWebView*)webView
+    requestMediaCapturePermissionForOrigin:(WKSecurityOrigin*)origin
+    initiatedByFrame:(WKFrameInfo*)frame
+    type:(WKMediaCaptureType)type
+    decisionHandler:(void (^)(WKPermissionDecision))decisionHandler
+    API_AVAILABLE(macos(12.0))
+{
+    decisionHandler(WKPermissionDecisionGrant);
+}
+@end
+
+static JuceCameraDelegate* gCameraDelegate = nil;
+
+static WKWebView* findWKWebView(NSView* view)
+{
+    if ([view isKindOfClass:[WKWebView class]])
+        return (WKWebView*)view;
+    for (NSView* sub in view.subviews)
+        if (auto* found = findWKWebView(sub)) return found;
+    return nil;
+}
+
+static void enableCameraInWebView(NSView* rootView)
+{
+    WKWebView* wk = findWKWebView(rootView);
+    if (!wk) return;
+
+    // Allow navigator.mediaDevices on file:// origins
+    if (@available(macOS 12.0, *))
+        [wk.configuration.preferences setValue:@YES forKey:@"mediaDevicesEnabled"];
+    else
+        [wk.configuration.preferences setValue:@YES forKey:@"_mediaDevicesEnabled"];
+
+    // Auto-grant camera permission inside WKWebView (no extra dialog)
+    if (!gCameraDelegate)
+        gCameraDelegate = [[JuceCameraDelegate alloc] init];
+    wk.UIDelegate = gCameraDelegate;
+
+    // Trigger the one-time macOS camera permission dialog, then reload
+    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo
+                           completionHandler:^(BOOL granted) {
+        if (granted)
+            dispatch_async(dispatch_get_main_queue(), ^{ [wk reload]; });
+    }];
+}
+
+#endif // JUCE_MAC
+// ─────────────────────────────────────────────────────────────────────────────
 
 PerKungFuEditor::PerKungFuEditor (PerKungFuProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
@@ -34,6 +95,14 @@ PerKungFuEditor::PerKungFuEditor (PerKungFuProcessor& p)
     webView->goToURL ("file://" + htmlFile.getFullPathName());
 
     startTimerHz (30);
+
+#if JUCE_MAC
+    // 300 ms: WKWebView needs time to be added to the NSView hierarchy
+    juce::Timer::callAfterDelay (300, [this]() {
+        if (auto* peer = getPeer())
+            enableCameraInWebView ((NSView*) peer->getNativeHandle());
+    });
+#endif
 }
 
 PerKungFuEditor::~PerKungFuEditor()

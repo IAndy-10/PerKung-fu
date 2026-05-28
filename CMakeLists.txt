@@ -40,6 +40,7 @@ juce_add_plugin(PerKungFu
     COPY_PLUGIN_AFTER_BUILD         TRUE
     MICROPHONE_PERMISSION_ENABLED   TRUE
     MICROPHONE_PERMISSION_TEXT      "PerKung-fu needs microphone access for contact mic input"
+    PLIST_TO_MERGE                  "<plist><dict><key>NSCameraUsageDescription</key><string>PerKung-fu uses the camera to detect objects and map them to synthesis presets.</string></dict></plist>"
 )
 
 juce_generate_juce_header(PerKungFu)
@@ -64,6 +65,12 @@ target_sources(PerKungFu PRIVATE
     Source/DSP/DrumVoice.h
 )
 
+if(APPLE)
+    # Compile PluginEditor.cpp as Objective-C++ so it can use WebKit/AVFoundation directly
+    set_source_files_properties(Source/PluginEditor.cpp
+        PROPERTIES COMPILE_FLAGS "-x objective-c++")
+endif()
+
 target_include_directories(PerKungFu PRIVATE
     Source
     Source/DSP
@@ -79,6 +86,13 @@ target_compile_definitions(PerKungFu PRIVATE
     JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_REPORT_APP_USAGE=0
 )
+
+if(APPLE)
+    target_link_libraries(PerKungFu PRIVATE
+        "-framework AVFoundation"
+        "-framework WebKit"
+    )
+endif()
 
 target_link_libraries(PerKungFu PRIVATE
     PerKungFuData

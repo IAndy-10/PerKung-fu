@@ -4,6 +4,10 @@
   import { bridge } from './bridge/bridge';
   import type { ParameterId } from './types/parameters';
   import ParamSlider from './components/ParamSlider.svelte';
+  import Camera from './components/Camera.svelte';
+
+  let camActive = false;
+  let camError  = '';
 
   const { tuning, decay, damp, strike, atten, lcut, mic_gain, out_gain, threshold } = params;
 
@@ -191,18 +195,12 @@
       <div class="panel cam-outer">
         <div class="panel-hd">
           <span class="title">◢ Optic · Object Recognition</span>
-          <span class="meta">CAM_01 · CASPER-3 model · 0 targets</span>
+          <span class="meta">CAM_01 · CASPER-3 model · {camActive ? 'LIVE' : 'OFFLINE'}</span>
         </div>
         <div class="cam-wrap">
           <div class="cam">
-            <!-- Placeholder: camera not yet implemented -->
-            <div class="placeholder">
-              <div class="ph-inner">
-                <div class="big">no signal</div>
-                <div class="micro">target acquisition offline</div>
-                <button class="cam-btn">◉ engage camera</button>
-              </div>
-            </div>
+            <!-- Camera feed — auto-starts via getUserMedia -->
+            <Camera bind:active={camActive} bind:error={camError} />
 
             <!-- HUD overlay -->
             <div class="corner tl"></div>
@@ -215,7 +213,7 @@
             <div class="hud-top">
               <span>◉ REC · CAM_01</span>
               <span>F/2.4 · ISO_400</span>
-              <span>STBY</span>
+              <span>{camActive ? 'LIVE' : camError ? 'ERR' : 'INIT'}</span>
             </div>
             <div class="hud-bot">
               <span>EXP 1/60</span>
@@ -230,7 +228,7 @@
       <div class="panel spec-panel">
         <div class="panel-hd">
           <span class="title">◢ Spectrum · Post-FX</span>
-          <span class="meta">FFT 2048 · log</span>
+          <span class="meta">FFT 1024 · log</span>
         </div>
         <div class="spec">
           {#each spec as v}

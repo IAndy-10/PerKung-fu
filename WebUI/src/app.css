@@ -230,41 +230,19 @@ html, body {
   min-height: 180px;
 }
 
-.cam .placeholder {
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-  background:
-    radial-gradient(ellipse at center, rgba(127,237,220,.04), transparent 60%),
-    repeating-linear-gradient(0deg, transparent 0, transparent 19px, rgba(127,237,220,.08) 19px, rgba(127,237,220,.08) 20px),
-    repeating-linear-gradient(90deg, transparent 0, transparent 19px, rgba(127,237,220,.08) 19px, rgba(127,237,220,.08) 20px),
-    #02080a;
-  color: var(--accent);
+/* HUD overlays — z-index: 2 ensures they always render above the <video> (z-index: auto) */
+.cam .corner {
+  position: absolute; z-index: 2;
+  width: 18px; height: 18px; border: 1px solid var(--accent);
 }
-.ph-inner { text-align: center; }
-.ph-inner .big {
-  font-family: 'Major Mono Display'; font-size: 28px;
-  letter-spacing: .1em; margin-bottom: 8px;
-}
-
-.cam-btn {
-  display: block; margin: 14px auto 0;
-  background: transparent; color: var(--accent);
-  border: 1px solid var(--accent); padding: 8px 16px;
-  font-family: 'JetBrains Mono'; font-size: 10px;
-  letter-spacing: .18em; text-transform: uppercase;
-  cursor: pointer;
-}
-.cam-btn:hover { background: rgba(127,237,220,.1); }
-
-/* HUD corners */
-.cam .corner { position: absolute; width: 18px; height: 18px; border: 1px solid var(--accent); }
 .cam .corner.tl { top: 8px; left: 8px; border-right: 0; border-bottom: 0; }
 .cam .corner.tr { top: 8px; right: 8px; border-left: 0; border-bottom: 0; }
 .cam .corner.bl { bottom: 8px; left: 8px; border-right: 0; border-top: 0; }
 .cam .corner.br { bottom: 8px; right: 8px; border-left: 0; border-top: 0; }
 
 .cam .reticle {
-  position: absolute; top: 50%; left: 50%;
+  position: absolute; z-index: 2;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 80px; height: 80px;
   border: 1px dashed rgba(127,237,220,.5);
@@ -278,7 +256,8 @@ html, body {
 .cam .reticle::after  { left: 50%; top: -10px; bottom: -10px; width: 1px; transform: translateX(-50%); }
 
 .cam .scanline-sweep {
-  position: absolute; left: 0; right: 0; height: 2px;
+  position: absolute; z-index: 2;
+  left: 0; right: 0; height: 2px;
   background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
   opacity: .4; pointer-events: none;
   animation: scan 4s linear infinite;
@@ -287,7 +266,8 @@ html, body {
 
 .cam .hud-top,
 .cam .hud-bot {
-  position: absolute; left: 32px; right: 32px;
+  position: absolute; z-index: 2;
+  left: 32px; right: 32px;
   display: flex; justify-content: space-between;
   font-size: 9px; color: var(--accent);
   letter-spacing: .16em; text-transform: uppercase;

@@ -5,9 +5,41 @@
   import type { ParameterId } from './types/parameters';
   import ParamSlider from './components/ParamSlider.svelte';
   import Camera from './components/Camera.svelte';
+  import ObjectDetector from './components/ObjectDetector.svelte';
+  import { detections } from './stores/detections';
+  import { PRESETS } from './presets';
 
   let camActive = false;
   let camError  = '';
+
+  // ── Detection stabilization + preset application ──────────────
+  const STABLE_FRAMES = 10; // ~0.66 s at 15 fps detection rate
+  let stableLabel: string | null = null;
+  let stableCount = 0;
+  let activePreset: string | null = null;
+
+  function applyPreset(label: string) {
+    const preset = PRESETS[label];
+    if (!preset) return;
+    for (const [id, value] of Object.entries(preset) as [ParameterId, number][]) {
+      send(id, value);
+    }
+  }
+
+  $: {
+    const top = $detections[0] ?? null;
+    const label = top?.label ?? null;
+    if (label === stableLabel) {
+      stableCount++;
+      if (stableCount >= STABLE_FRAMES && label !== activePreset && label !== null) {
+        activePreset = label;
+        applyPreset(label);
+      }
+    } else {
+      stableLabel = label;
+      stableCount = 1;
+    }
+  }
 
   const { tuning, decay, damp, strike, atten, lcut, mic_gain, out_gain, threshold } = params;
 
@@ -102,6 +134,9 @@
   $: inDb    = inLvl  > 0.001 ? (20 * Math.log10(inLvl)).toFixed(1)  : '-∞';
   $: outDb   = outLvl > 0.001 ? (20 * Math.log10(outLvl)).toFixed(1) : '-∞';
 </script>
+
+<!-- Headless MediaPipe object detector — subscribes to cameraStream, writes to detections store -->
+<ObjectDetector />
 
 <div class="app" data-palette="peach" data-scanlines="true" data-bloom="true">
 
@@ -218,7 +253,7 @@
             <div class="hud-bot">
               <span>EXP 1/60</span>
               <span>OBJ_DETECT v3.14</span>
-              <span>00 TGT</span>
+              <span>{String($detections.length).padStart(2, '0')} TGT</span>
             </div>
           </div>
         </div>
@@ -262,10 +297,22 @@
       <div class="panel" style="flex:1;display:flex;flex-direction:column;">
         <div class="panel-hd">
           <span class="title">◢ Detected Objects</span>
-          <span class="meta">YOLO·v8 · COCO</span>
+          <span class="meta">MediaPipe · COCO</span>
         </div>
         <div class="det-list">
-          <div class="det-empty">no targets in frame</div>
+          {#if $detections.length === 0}
+            <div class="det-empty">no targets in frame</div>
+          {:else}
+            {#each $detections as d}
+              <div class="det-row" class:det-active={d.label === activePreset}>
+                <span class="det-label">{d.label.toUpperCase()}</span>
+                <span class="det-conf">{(d.score * 100).toFixed(0)}%</span>
+                {#if d.label === activePreset}
+                  <span class="det-badge">PRESET</span>
+                {/if}
+              </div>
+            {/each}
+          {/if}
         </div>
       </div>
 

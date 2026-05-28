@@ -301,6 +301,26 @@ html, body {
   color: var(--fg-deep);
 }
 
+.det-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 6px;
+  font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.det-row.det-active {
+  border-color: rgba(0, 200, 180, 0.35);
+  background: rgba(0, 200, 180, 0.04);
+}
+.det-label { flex: 1; color: var(--fg); }
+.det-conf  { color: var(--fg-dim); }
+.det-badge {
+  font-size: 7px; letter-spacing: .16em;
+  color: rgba(0, 200, 180, 0.85);
+  border: 1px solid rgba(0, 200, 180, 0.4);
+  padding: 1px 4px;
+}
+
 .stats {
   padding: 10px;
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px;

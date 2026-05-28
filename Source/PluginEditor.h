@@ -1,38 +1,29 @@
 #pragma once
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "WebviewBridge.h"
 
 class PerKungFuEditor : public juce::AudioProcessorEditor,
                         private juce::Timer
 {
 public:
     explicit PerKungFuEditor (PerKungFuProcessor&);
+    ~PerKungFuEditor() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
-    void timerCallback() override
-    {
-        float target = processor.inputLevel.load (std::memory_order_relaxed);
-        if (target >= meterLevel)
-            meterLevel = target;
-        else
-            meterLevel *= 0.85f;
-        repaint();
-    }
+    void timerCallback() override;
 
-    PerKungFuProcessor& processor;
-    float meterLevel = 0.0f;
+    PerKungFuProcessor& processorRef;
+    std::unique_ptr<WebViewBridge> webView;
 
-    struct ParamRow
-    {
-        juce::Label  label;
-        juce::Slider slider { juce::Slider::LinearBar, juce::Slider::NoTextBox };
-        std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
-    };
+    void onParameterChangedFromJS (const juce::String& paramId, float value);
+    void sendAllParamsToJS();
+    void sendParamToJS (const juce::String& paramId, float normalizedValue);
 
-    std::array<ParamRow, 9> rows;
+    std::unordered_map<std::string, float> lastParamValues;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PerKungFuEditor)
 };

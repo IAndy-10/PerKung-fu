@@ -1,0 +1,27 @@
+{
+    "name": "audio-plugin-ui",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@mediapipe/tasks-vision": "^0.10.3"
+    },
+    "devDependencies": {
+        "@sveltejs/vite-plugin-svelte": "^6.2.4",
+        "autoprefixer": "^10.4.17",
+        "postcss": "^8.4.35",
+        "svelte": "^5.53.2",
+        "svelte-check": "^4.4.3",
+        "tailwindcss": "^3.4.1",
+        "terser": "^5.46.0",
+        "tslib": "^2.6.2",
+        "typescript": "^5.2.2",
+        "vite": "^7.3.1",
+        "vite-plugin-singlefile": "^2.3.0"
+    }
+}

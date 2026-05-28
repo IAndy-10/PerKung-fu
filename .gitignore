@@ -2,7 +2,7 @@
 target/
 haptic-perc/target/
 build/
-dist/
+/dist/
 docs/
 
 # Editor
@@ -11,7 +11,19 @@ docs/
 .vscode/
 .idea/
 
+
 # clack, clap, and nih-plug are reference repos, not our source
 clack/
 clap/
 nih-plug/
+
+# Documentation
+docs/
+*.md
+
+# Node
+node_modules/
+
+# Reference implementations
+WebUI/Perkung-fu-design/
+

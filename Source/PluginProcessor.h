@@ -94,14 +94,30 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
-    // Input level meter — written by audio thread, read by GUI timer
-    std::atomic<float> inputLevel { 0.0f };
+    // Level meters + spectrum — written by audio thread, read by GUI timer
+    std::atomic<float> inputLevel  { 0.0f };
+    std::atomic<float> outputLevel { 0.0f };
+
+    static constexpr int FFT_ORDER = 10;           // 1024-point FFT
+    static constexpr int FFT_SIZE  = 1 << FFT_ORDER;
+    static constexpr int NUM_SPEC  = 40;
+
+    std::array<std::atomic<float>, NUM_SPEC> spectrumData {};
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     DrumVoice     voice;
     OnsetDetector onset;
+
+    juce::dsp::FFT fftProcessor { FFT_ORDER };
+    juce::dsp::WindowingFunction<float> fftWindow {
+        (size_t)FFT_SIZE, juce::dsp::WindowingFunction<float>::hann };
+    std::array<float, FFT_SIZE * 2> fftInOut {};
+    std::array<float, FFT_SIZE>     fftAccum {};
+    int fftPos = 0;
+
+    void updateSpectrum();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PerKungFuProcessor)
 };

@@ -32,15 +32,23 @@ juce_add_plugin(PerKungFu
     COMPANY_NAME                    "Sampleson"
     PLUGIN_MANUFACTURER_CODE        Smps
     PLUGIN_CODE                     Pkfu
-    FORMATS                         AU VST3
+    FORMATS                         AU VST3 Standalone
     IS_SYNTH                        FALSE
     NEEDS_MIDI_INPUT                TRUE
     IS_MIDI_EFFECT                  FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS     FALSE
     COPY_PLUGIN_AFTER_BUILD         TRUE
+    MICROPHONE_PERMISSION_ENABLED   TRUE
+    MICROPHONE_PERMISSION_TEXT      "PerKung-fu needs microphone access for contact mic input"
 )
 
 juce_generate_juce_header(PerKungFu)
+
+# ============================================================
+# WebUI binary data (built from WebUI/dist/index.html)
+# ============================================================
+
+juce_add_binary_data(PerKungFuData SOURCES WebUI/dist/index.html)
 
 # ============================================================
 # Sources
@@ -52,6 +60,7 @@ target_sources(PerKungFu PRIVATE
     Source/PluginEditor.h
     Source/PluginEditor.cpp
     Source/ParameterIDs.h
+    Source/WebviewBridge.h
     Source/DSP/DrumVoice.h
 )
 
@@ -65,15 +74,20 @@ target_include_directories(PerKungFu PRIVATE
 # ============================================================
 
 target_compile_definitions(PerKungFu PRIVATE
-    JUCE_WEB_BROWSER=0
+    JUCE_WEB_BROWSER=1
     JUCE_USE_CURL=0
     JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_REPORT_APP_USAGE=0
 )
 
 target_link_libraries(PerKungFu PRIVATE
+    PerKungFuData
     juce::juce_audio_processors
+    juce::juce_audio_devices
+    juce::juce_audio_utils
+    juce::juce_dsp
     juce::juce_gui_basics
+    juce::juce_gui_extra
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )

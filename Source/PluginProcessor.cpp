@@ -105,6 +105,8 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (int ch = 0; ch < numOut; ++ch)
         buffer.clear (ch, 0, numSamples);
 
+    float outPeak = 0.0f;
+
     for (int i = 0; i < numSamples; ++i)
     {
         // 1. Contact mic onset detection
@@ -119,9 +121,20 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
         // 2. Synthesize
         float s = voice.nextSampleMono (lcut, atten) * outGain;
+        outPeak = std::max (outPeak, std::abs (s));
         for (int ch = 0; ch < numOut; ++ch)
             buffer.setSample (ch, i, s);
+
+        // 3. Accumulate for FFT spectrum
+        fftAccum[fftPos++] = s;
+        if (fftPos >= FFT_SIZE)
+        {
+            updateSpectrum();
+            fftPos = 0;
+        }
     }
+
+    outputLevel.store (outPeak, std::memory_order_relaxed);
 }
 
 void PerKungFuProcessor::getStateInformation (juce::MemoryBlock& data)
@@ -143,7 +156,39 @@ juce::AudioProcessorEditor* PerKungFuProcessor::createEditor()
     return new PerKungFuEditor (*this);
 }
 
+void PerKungFuProcessor::updateSpectrum()
+{
+    // Copy accumulated samples, zero the second half (imaginary), apply window
+    std::copy (fftAccum.begin(), fftAccum.end(), fftInOut.begin());
+    std::fill (fftInOut.begin() + FFT_SIZE, fftInOut.end(), 0.0f);
+    fftWindow.multiplyWithWindowingTable (fftInOut.data(), (size_t)FFT_SIZE);
+
+    // In-place FFT — magnitudes appear in fftInOut[0..FFT_SIZE/2]
+    fftProcessor.performFrequencyOnlyForwardTransform (fftInOut.data());
+
+    float sr    = static_cast<float> (getSampleRate());
+    float scale = 2.0f / (float)FFT_SIZE;   // normalise to 0..1 for full-scale
+
+    for (int b = 0; b < NUM_SPEC; ++b)
+    {
+        float freqLo = 20.0f * std::pow (1000.0f, (float)b       / (float)NUM_SPEC);
+        float freqHi = 20.0f * std::pow (1000.0f, (float)(b + 1) / (float)NUM_SPEC);
+        int binLo = std::max (0,          (int)(freqLo * (float)FFT_SIZE / sr));
+        int binHi = std::min (FFT_SIZE/2, (int)(freqHi * (float)FFT_SIZE / sr));
+        binHi     = std::max (binLo + 1,  binHi);
+
+        float mag = 0.0f;
+        for (int k = binLo; k < binHi; ++k)
+            mag = std::max (mag, fftInOut[k]);
+
+        float db   = 20.0f * std::log10 (std::max (mag * scale, 1e-7f));
+        float norm = juce::jmap (db, -80.0f, 0.0f, 0.0f, 1.0f);
+        spectrumData[b].store (std::max (0.0f, norm), std::memory_order_relaxed);
+    }
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new PerKungFuProcessor();
 }
+

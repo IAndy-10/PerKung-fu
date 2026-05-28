@@ -1,83 +1,141 @@
 #include "PluginEditor.h"
 #include "ParameterIDs.h"
 
-static const std::pair<juce::ParameterID, const char*> PARAM_ROWS[] = {
-    { ParamID::Tuning,    "Tuning"      },
-    { ParamID::Decay,     "Decay"       },
-    { ParamID::Damp,      "Damp"        },
-    { ParamID::Strike,    "Strike"      },
-    { ParamID::Atten,     "Attenuation" },
-    { ParamID::LCut,      "L/Cut"       },
-    { ParamID::MicGain,   "Mic Gain"    },
-    { ParamID::OutGain,   "Out Gain"    },
-    { ParamID::Threshold, "Threshold"   },
-};
-
 PerKungFuEditor::PerKungFuEditor (PerKungFuProcessor& p)
-    : AudioProcessorEditor (p), processor (p)
+    : AudioProcessorEditor (&p), processorRef (p)
 {
-    for (int i = 0; i < 9; ++i)
-    {
-        auto& row = rows[(size_t) i];
-        auto& [paramId, name] = PARAM_ROWS[i];
+    webView = std::make_unique<WebViewBridge>();
+    addAndMakeVisible (webView.get());
 
-        row.label.setText (name, juce::dontSendNotification);
-        row.label.setJustificationType (juce::Justification::centredRight);
-        addAndMakeVisible (row.label);
+    // JS → C++: parameter changes from the UI
+    webView->setParameterCallback ([this] (const juce::String& paramId, float value) {
+        onParameterChangedFromJS (paramId, value);
+    });
 
-        row.slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 60, 20);
-        addAndMakeVisible (row.slider);
+    // Page loaded: push all current param values now that JS is ready.
+    // Clear lastParamValues so the timer also detects them as "new" in case
+    // any value changes between page load and the first timer tick.
+    webView->setPageLoadedCallback ([this]() {
+        lastParamValues.clear();
+        sendAllParamsToJS();
+    });
 
-        row.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-            processor.apvts, paramId.getParamID(), row.slider);
-    }
+    setSize (1200, 760);
+    setResizable (true, true);
 
-    setSize (400, 394);
+    // Embed the built WebUI into a temp dir and load it
+    auto tempDir = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                       .getChildFile ("PerKungFu_" + juce::String (juce::Time::currentTimeMillis()));
+    tempDir.createDirectory();
+
+    auto htmlFile = tempDir.getChildFile ("index.html");
+    htmlFile.replaceWithData (BinaryData::index_html, BinaryData::index_htmlSize);
+
+    webView->goToURL ("file://" + htmlFile.getFullPathName());
+
     startTimerHz (30);
+}
+
+PerKungFuEditor::~PerKungFuEditor()
+{
+    stopTimer();
 }
 
 void PerKungFuEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xff1e1e2e));
-
-    // Title
-    g.setColour (juce::Colour (0xffcdd6f4));
-    g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
-    g.drawText ("PerKung-fu", getLocalBounds().removeFromTop (36),
-                juce::Justification::centred, false);
-
-    // Separator above threshold row
-    auto sepY = 36 + 12 + 8 * (28 + 4) - 2;
-    g.setColour (juce::Colour (0xff45475a));
-    g.drawHorizontalLine (sepY, 12.0f, (float) getWidth() - 12.0f);
-
-    // Input level meter
-    auto meterArea = getLocalBounds().removeFromBottom (14).reduced (12, 2);
-    g.setColour (juce::Colour (0xff313244));
-    g.fillRect (meterArea);
-    g.setColour (meterLevel > 0.01f ? juce::Colour (0xffa6e3a1) : juce::Colour (0xff45475a));
-    g.fillRect (meterArea.withWidth ((int) (meterArea.getWidth() * juce::jlimit (0.0f, 1.0f, meterLevel))));
-    g.setColour (juce::Colour (0xff6c7086));
-    g.setFont (juce::FontOptions (10.0f));
-    g.drawText ("IN", meterArea, juce::Justification::centredLeft, false);
+    g.fillAll (juce::Colour (0xff0c0a08));
 }
 
 void PerKungFuEditor::resized()
 {
-    auto area = getLocalBounds().reduced (12);
-    area.removeFromBottom (14);
-    area.removeFromTop (36);
+    if (webView != nullptr)
+        webView->setBounds (getLocalBounds());
+}
 
-    const int rowH   = 28;
-    const int labelW = 90;
-    const int gap    = 4;
+void PerKungFuEditor::timerCallback()
+{
+    auto& apvts = processorRef.apvts;
 
-    for (auto& row : rows)
+    // Push any parameter values that have changed since last tick
+    auto sendIfChanged = [&] (const juce::String& paramId) {
+        auto* param = apvts.getParameter (paramId);
+        if (! param) return;
+        float normalized = param->getValue();
+        auto key = paramId.toStdString();
+        auto it  = lastParamValues.find (key);
+        if (it == lastParamValues.end() || std::abs (it->second - normalized) > 0.001f)
+        {
+            lastParamValues[key] = normalized;
+            sendParamToJS (paramId, normalized);
+        }
+    };
+
+    sendIfChanged (ParamID::Tuning.getParamID());
+    sendIfChanged (ParamID::Decay.getParamID());
+    sendIfChanged (ParamID::Damp.getParamID());
+    sendIfChanged (ParamID::Strike.getParamID());
+    sendIfChanged (ParamID::Atten.getParamID());
+    sendIfChanged (ParamID::LCut.getParamID());
+    sendIfChanged (ParamID::MicGain.getParamID());
+    sendIfChanged (ParamID::OutGain.getParamID());
+    sendIfChanged (ParamID::Threshold.getParamID());
+
+    // Push real audio level meters to JS (raw block peaks, JS applies ballistics)
+    float inLvl  = processorRef.inputLevel.load  (std::memory_order_relaxed);
+    float outLvl = processorRef.outputLevel.load (std::memory_order_relaxed);
+
+    webView->evaluateJavascript (
+        "if(window.setInputLevel){window.setInputLevel(" + juce::String (inLvl, 4) + ");}");
+    webView->evaluateJavascript (
+        "if(window.setOutputLevel){window.setOutputLevel(" + juce::String (outLvl, 4) + ");}");
+
+    // Push FFT spectrum (40 log-spaced magnitude bins, 0..1)
+    juce::String specJs = "if(window.setSpectrum){window.setSpectrum([";
+    for (int i = 0; i < PerKungFuProcessor::NUM_SPEC; ++i)
     {
-        auto rowArea = area.removeFromTop (rowH);
-        area.removeFromTop (gap);
+        if (i > 0) specJs += ",";
+        specJs += juce::String (processorRef.spectrumData[i].load (std::memory_order_relaxed), 3);
+    }
+    specJs += "]);}";
+    webView->evaluateJavascript (specJs);
+}
 
-        row.label.setBounds (rowArea.removeFromLeft (labelW));
-        row.slider.setBounds (rowArea);
+void PerKungFuEditor::sendAllParamsToJS()
+{
+    auto& apvts = processorRef.apvts;
+
+    auto sendAll = [&] (const juce::String& paramId) {
+        auto* param = apvts.getParameter (paramId);
+        if (! param) return;
+        float normalized = param->getValue();
+        lastParamValues[paramId.toStdString()] = normalized;
+        sendParamToJS (paramId, normalized);
+    };
+
+    sendAll (ParamID::Tuning.getParamID());
+    sendAll (ParamID::Decay.getParamID());
+    sendAll (ParamID::Damp.getParamID());
+    sendAll (ParamID::Strike.getParamID());
+    sendAll (ParamID::Atten.getParamID());
+    sendAll (ParamID::LCut.getParamID());
+    sendAll (ParamID::MicGain.getParamID());
+    sendAll (ParamID::OutGain.getParamID());
+    sendAll (ParamID::Threshold.getParamID());
+}
+
+void PerKungFuEditor::sendParamToJS (const juce::String& paramId, float normalizedValue)
+{
+    juce::String js = "if(window.setParameterValue){window.setParameterValue('"
+                      + paramId + "'," + juce::String (normalizedValue, 6) + ");}";
+    webView->evaluateJavascript (js);
+}
+
+void PerKungFuEditor::onParameterChangedFromJS (const juce::String& paramId, float value)
+{
+    auto* param = processorRef.apvts.getParameter (paramId);
+    if (param != nullptr)
+    {
+        param->setValueNotifyingHost (value);
+        lastParamValues[paramId.toStdString()] = value;
     }
 }

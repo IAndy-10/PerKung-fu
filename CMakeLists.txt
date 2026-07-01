@@ -46,10 +46,26 @@ juce_add_plugin(PerKungFu
 juce_generate_juce_header(PerKungFu)
 
 # ============================================================
-# WebUI binary data (built from WebUI/dist/index.html)
+# WebUI — run npm run build before embedding index.html
 # ============================================================
 
+find_program(NPM_EXECUTABLE npm REQUIRED)
+
+add_custom_command(
+    OUTPUT  ${CMAKE_SOURCE_DIR}/WebUI/dist/index.html
+    COMMAND ${NPM_EXECUTABLE} run build
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/WebUI
+    DEPENDS ${CMAKE_SOURCE_DIR}/WebUI/src/App.svelte
+            ${CMAKE_SOURCE_DIR}/WebUI/src/bridge/bridge.ts
+            ${CMAKE_SOURCE_DIR}/WebUI/src/state/store.ts
+            ${CMAKE_SOURCE_DIR}/WebUI/src/presets.ts
+    COMMENT "Building WebUI (npm run build)..."
+)
+
+add_custom_target(WebUIBuild DEPENDS ${CMAKE_SOURCE_DIR}/WebUI/dist/index.html)
+
 juce_add_binary_data(PerKungFuData SOURCES WebUI/dist/index.html)
+add_dependencies(PerKungFuData WebUIBuild)
 
 # ============================================================
 # Sources

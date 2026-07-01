@@ -10,8 +10,8 @@ export type Preset = Record<ParameterId, number>;
 export const PRESETS: Record<string, Preset> = {
     // Long warm pluck — sustained, muted, low-cut kept open
     banana: {
-        tuning:    0.5,    // 0 semitones
-        decay:     0.05,   // ~0.93 s
+        tuning:    0.708,  // +10 semitones
+        decay:     0.5,   // ~0.98 s
         damp:      0.5,    // 50 %
         strike:    0.5,    // 50 %
         atten:     0.1,    // 10 %
@@ -23,8 +23,8 @@ export const PRESETS: Record<string, Preset> = {
 
     // Short hard knock — bright, percussive, tight
     apple: {
-        tuning:    0.583,  // +4 semitones
-        decay:     0.013,  // ~0.5 s
+        tuning:    0.188,  // -15 semitones
+        decay:     0.55,  // ~0.98 s
         damp:      0.15,   // 15 %
         strike:    0.8,    // 80 %
         atten:     0.3,    // 30 %

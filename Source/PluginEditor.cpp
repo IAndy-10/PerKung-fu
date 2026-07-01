@@ -40,6 +40,9 @@ static void enableCameraInWebView(NSView* rootView)
     WKWebView* wk = findWKWebView(rootView);
     if (!wk) return;
 
+    // Enable Safari Web Inspector (Develop menu → plugin process)
+    [wk.configuration.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
+
     // Allow navigator.mediaDevices on file:// origins
     if (@available(macOS 12.0, *))
         [wk.configuration.preferences setValue:@YES forKey:@"mediaDevicesEnabled"];

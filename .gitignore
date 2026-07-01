@@ -19,7 +19,6 @@ nih-plug/
 
 # Documentation
 docs/
-*.md
 
 # Node
 node_modules/

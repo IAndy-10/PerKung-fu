@@ -3,6 +3,24 @@
 An experimental percussion synthesizer that combines physical modelling with computer vision preset control.
 Formats: **VST3 · AU · Standalone** — built with JUCE 8 and Svelte.
 
+## Download
+
+**Latest Release:** [PerKung-fu v0.1.0](https://github.com/IAndy-10/PerKung-fu/releases/latest)
+
+### Quick Install (macOS)
+
+1. **Download** the `.zip` from [Releases](https://github.com/IAndy-10/PerKung-fu/releases)
+2. **Unzip** and copy the plugins:
+   - `PerKung-fu.vst3` → `~/Library/Audio/Plug-Ins/VST3/`
+   - `PerKung-fu.component` → `~/Library/Audio/Plug-Ins/Components/`
+   - `PerKung-fu.app` → `/Applications/` (optional, for standalone)
+3. **Rescan** plugins in your DAW (restart DAW if needed)
+
+### Supported Formats
+- **VST3** (macOS 11+)
+- **AU** (macOS 10.13+)
+- **Standalone** (macOS 11+)
+
 ---
 
 ## Project goal

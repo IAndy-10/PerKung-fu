@@ -3,8 +3,6 @@ target/
 haptic-perc/target/
 build/
 /dist/
-docs/
-
 # Editor
 .DS_Store
 *.swp
@@ -16,9 +14,6 @@ docs/
 clack/
 clap/
 nih-plug/
-
-# Documentation
-docs/
 
 # Node
 node_modules/

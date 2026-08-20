@@ -29,7 +29,7 @@ FetchContent_MakeAvailable(JUCE)
 
 juce_add_plugin(PerKungFu
     PRODUCT_NAME                    "PerKung-fu"
-    COMPANY_NAME                    "Sampleson"
+    COMPANY_NAME                    "YoTerra"
     PLUGIN_MANUFACTURER_CODE        Smps
     PLUGIN_CODE                     Pkfu
     FORMATS                         AU VST3 Standalone

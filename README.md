@@ -23,6 +23,47 @@ Formats: **VST3 · AU · Standalone** — built with JUCE 8 and Svelte.
 
 ---
 
+## Getting Started
+
+### First Use (DAW)
+
+1. Load **PerKung-fu** as an insert on any track, or open the Standalone app.
+2. Open the plugin window — the embedded UI loads automatically.
+3. Connect a contact mic or use any microphone input through your audio interface.
+
+### Setting Up the Contact Mic
+
+1. Plug your contact mic into your audio interface.
+2. Route that input channel into the plugin (in DAW: set the track input accordingly; in Standalone: select your interface as the input device).
+3. Adjust **Mic Gain** and **Threshold** so that hits trigger the synthesis without false triggers from ambient noise.
+   - Start with **Threshold** around −30 dB and raise it until room noise no longer triggers the synth.
+   - Tap the surface and confirm the FFT meter responds.
+
+### Enabling Object Detection (Camera Presets)
+
+1. Click the **Camera** button in the UI.
+2. macOS will prompt for **camera permission** — click Allow. (This happens only once per app.)
+3. The "Detected Objects" panel shows what the camera sees and the confidence score.
+4. Hold a supported object in frame for ~0.6 s — the preset loads automatically and all parameters update.
+
+### Supported objects
+
+| Object | Character |
+|--------|-----------|
+| Banana | Long warm pluck — slow decay, low damping, +10 st tuning |
+| Apple  | Short hard knock — fast decay, bright, percussive, −15 st tuning |
+
+The plugin works without a camera — presets just won't switch automatically.
+
+### Recommended starting point
+
+- **Threshold**: −30 to −20 dB (adjust to your mic sensitivity)
+- **Decay**: 0.5–1.5 s for punchy hits
+- **Damp**: 40–60% for a balanced tone
+- **Strike**: 60–80% for a natural percussive attack
+
+---
+
 ## Project goal
 
 PerKung-fu is a playable, immersive plugin for producers and sound designers. It blends punchy rhythm textures, modular performance controls, and a distinctive visual presentation — bridging analog-style percussion design with a digital performance interface.

@@ -110,6 +110,14 @@ private:
     DrumVoice     voice;
     OnsetDetector onset;
 
+    // Parameters applied per sample are smoothed to avoid zipper noise.
+    // Tuning, decay, damp and strike are only read at trigger time.
+    static constexpr double SMOOTHING_SECONDS = 0.02; // 20 ms ramp
+    juce::SmoothedValue<float> outGainSmoothed { 1.0f };
+    juce::SmoothedValue<float> lcutSmoothed    { 1.0f };
+    juce::SmoothedValue<float> attenSmoothed   { 0.0f };
+    juce::SmoothedValue<float> micGainSmoothed { 1.0f };
+
     juce::dsp::FFT fftProcessor { FFT_ORDER };
     juce::dsp::WindowingFunction<float> fftWindow {
         (size_t)FFT_SIZE, juce::dsp::WindowingFunction<float>::hann };

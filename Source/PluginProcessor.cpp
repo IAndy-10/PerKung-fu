@@ -65,6 +65,18 @@ void PerKungFuProcessor::prepareToPlay (double sampleRate, int)
 {
     voice.setSampleRate (static_cast<float> (sampleRate));
     onset.reset();
+
+    auto initSmoother = [sampleRate] (juce::SmoothedValue<float>& sv, float value)
+    {
+        sv.reset (sampleRate, SMOOTHING_SECONDS);
+        sv.setCurrentAndTargetValue (value);
+    };
+
+    initSmoother (outGainSmoothed, juce::Decibels::decibelsToGain (
+        apvts.getRawParameterValue (ParamID::OutGain.getParamID())->load()));
+    initSmoother (lcutSmoothed,    apvts.getRawParameterValue (ParamID::LCut.getParamID())->load());
+    initSmoother (attenSmoothed,   apvts.getRawParameterValue (ParamID::Atten.getParamID())->load());
+    initSmoother (micGainSmoothed, apvts.getRawParameterValue (ParamID::MicGain.getParamID())->load());
 }
 
 void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
@@ -82,7 +94,11 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     auto outGainDb   = apvts.getRawParameterValue (ParamID::OutGain.getParamID())->load();
     auto thresholdDb = apvts.getRawParameterValue (ParamID::Threshold.getParamID())->load();
 
-    float outGain      = juce::Decibels::decibelsToGain (outGainDb);
+    outGainSmoothed.setTargetValue (juce::Decibels::decibelsToGain (outGainDb));
+    lcutSmoothed.setTargetValue (lcut);
+    attenSmoothed.setTargetValue (atten);
+    micGainSmoothed.setTargetValue (micGain);
+
     float thresholdLin = juce::Decibels::decibelsToGain (thresholdDb);
     float sr           = static_cast<float> (getSampleRate());
 
@@ -108,14 +124,16 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         float sig = 0.0f;
         for (int ch = 0; ch < numIn; ++ch)
             sig = std::max (sig, std::abs (buffer.getSample (ch, i)));
-        sig *= micGain;
+        sig *= micGainSmoothed.getNextValue();
 
         float vel = onset.process (sig, thresholdLin, sr);
         if (vel >= 0.0f)
             voice.trigger (60, vel, tuning, decay, damp, strike);
 
         // 2. Synthesize
-        float s = voice.nextSampleMono (lcut, atten) * outGain;
+        float s = voice.nextSampleMono (lcutSmoothed.getNextValue(),
+                                        attenSmoothed.getNextValue())
+                  * outGainSmoothed.getNextValue();
         outPeak = std::max (outPeak, std::abs (s));
         for (int ch = 0; ch < numOut; ++ch)
             buffer.setSample (ch, i, s);

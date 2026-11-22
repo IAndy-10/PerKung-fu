@@ -100,9 +100,13 @@ PerKungFuEditor::PerKungFuEditor (PerKungFuProcessor& p)
     startTimerHz (30);
 
 #if JUCE_MAC
-    // 300 ms: WKWebView needs time to be added to the NSView hierarchy
-    juce::Timer::callAfterDelay (300, [this]() {
-        if (auto* peer = getPeer())
+    // 300 ms: WKWebView needs time to be added to the NSView hierarchy.
+    // SafePointer: the editor may be closed before the delay fires, and a raw
+    // `this` would then be a dangling pointer (use-after-free crash).
+    juce::Timer::callAfterDelay (300, [safeThis = juce::Component::SafePointer<PerKungFuEditor> (this)]() {
+        if (safeThis == nullptr)
+            return;
+        if (auto* peer = safeThis->getPeer())
             enableCameraInWebView ((NSView*) peer->getNativeHandle());
     });
 #endif

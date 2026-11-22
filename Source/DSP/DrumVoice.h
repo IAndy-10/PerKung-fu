@@ -52,7 +52,11 @@ class DrumVoice
 public:
     DrumVoice() = default;
 
-    void setSampleRate (float sr) { sampleRate = sr; }
+    void setSampleRate (float sr)
+    {
+        sampleRate = sr;
+        cachedLcut = -1.0f; // coefficient depends on sample rate: force recompute
+    }
 
     void trigger (int note, float velocity, float tuning,
                   float decay, float damp, float strike)
@@ -91,8 +95,14 @@ public:
                               pendingDecay, pendingDamp, pendingStrike);
         }
 
-        float fc      = std::min (20.0f * std::pow (1000.0f, lcut), sampleRate * 0.499f);
-        float lpCoeff = std::clamp (1.0f - std::exp (-TWO_PI * fc / sampleRate), 0.0f, 1.0f);
+        // pow/exp only run when lcut changes (e.g. during a parameter ramp),
+        // not on every sample.
+        if (lcut != cachedLcut)
+        {
+            cachedLcut = lcut;
+            float fc   = std::min (20.0f * std::pow (1000.0f, lcut), sampleRate * 0.499f);
+            lpCoeff    = std::clamp (1.0f - std::exp (-TWO_PI * fc / sampleRate), 0.0f, 1.0f);
+        }
         float attenGain = 1.0f - atten * 0.95f;
 
         float out = 0.0f;
@@ -138,6 +148,8 @@ private:
     std::array<Mode, NUM_MODES> modes;
     float sampleRate = 44100.0f;
     float lpState    = 0.0f;
+    float lpCoeff    = 1.0f;
+    float cachedLcut = -1.0f; // outside the 0–1 range, so the first call computes lpCoeff
 
     int   fadeCountdown   = 0;
     int   pendingNote     = 60;

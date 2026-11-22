@@ -90,21 +90,16 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     int numIn      = getTotalNumInputChannels();
     int numOut     = getTotalNumOutputChannels();
 
-    // Copy input before clearing (host uses in-place buffers)
-    juce::AudioBuffer<float> inputCopy (numIn, numSamples);
-    for (int ch = 0; ch < numIn; ++ch)
-        inputCopy.copyFrom (ch, 0, buffer.getReadPointer (ch), numSamples);
-
-    // Peak level for the GUI meter
+    // Peak level for the GUI meter (read before the input is overwritten)
     float peak = 0.0f;
     for (int ch = 0; ch < numIn; ++ch)
-        peak = std::max (peak, inputCopy.getMagnitude (ch, 0, numSamples));
+        peak = std::max (peak, buffer.getMagnitude (ch, 0, numSamples));
     inputLevel.store (peak, std::memory_order_relaxed);
 
-    // Clear output — synthesis replaces the input signal
-    for (int ch = 0; ch < numOut; ++ch)
-        buffer.clear (ch, 0, numSamples);
-
+    // Process in place, with no input copy, so the audio thread never allocates.
+    // Each sample i reads every input channel first and only then writes every
+    // output channel, so the synthesis replaces the input without clobbering
+    // samples that are still to be read.
     float outPeak = 0.0f;
 
     for (int i = 0; i < numSamples; ++i)
@@ -112,7 +107,7 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         // 1. Contact mic onset detection
         float sig = 0.0f;
         for (int ch = 0; ch < numIn; ++ch)
-            sig = std::max (sig, std::abs (inputCopy.getSample (ch, i)));
+            sig = std::max (sig, std::abs (buffer.getSample (ch, i)));
         sig *= micGain;
 
         float vel = onset.process (sig, thresholdLin, sr);

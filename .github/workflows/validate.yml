@@ -1,0 +1,47 @@
+name: Build & Validate
+
+# Builds the VST3 and runs pluginval at strictness level 5 on every push and
+# pull request. Signed release binaries are built separately by
+# build-release.yml when a v* tag is pushed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: WebUI/package-lock.json
+
+      - name: Install WebUI dependencies
+        working-directory: WebUI
+        run: npm ci
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target PerKungFu_VST3 -j"$(sysctl -n hw.ncpu)"
+
+      - name: Download pluginval
+        run: |
+          curl -fsSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+          unzip -q pluginval.zip
+
+      - name: Validate with pluginval (strictness 5)
+        run: |
+          ./pluginval.app/Contents/MacOS/pluginval \
+            --strictness-level 5 \
+            --validate build/PerKungFu_artefacts/Release/VST3/PerKung-fu.vst3

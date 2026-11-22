@@ -1,5 +1,7 @@
 # PerKung-fu
 
+[![Build & Validate](https://github.com/IAndy-10/PerKung-fu/actions/workflows/validate.yml/badge.svg)](https://github.com/IAndy-10/PerKung-fu/actions/workflows/validate.yml)
+
 A modal synthesis percussion plug-in. Hit any surface with a contact mic and PerKung-fu turns each hit into a synthesized drum: onset detection triggers 8 resonant modes of a circular membrane. A camera running object detection switches presets when you hold up an object.
 
 **Formats:** VST3 · AU · Standalone · **Stack:** C++17 / JUCE 8 DSP, Svelte 5 WebView UI · **Validated** with pluginval at strictness level 5
@@ -201,7 +203,7 @@ The plugin is copied to `~/Library/Audio/Plug-Ins/` after each successful build 
 
 ## Validation
 
-Changes are checked locally with [pluginval](https://github.com/Tracktion/pluginval) at strictness level 5:
+Every push and pull request is built and validated with [pluginval](https://github.com/Tracktion/pluginval) at strictness level 5 by the [Build & Validate workflow](.github/workflows/validate.yml). To run the same check locally:
 
 ```bash
 /Applications/pluginval.app/Contents/MacOS/pluginval \

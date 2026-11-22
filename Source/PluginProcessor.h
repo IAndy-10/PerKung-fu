@@ -104,6 +104,10 @@ public:
 
     std::array<std::atomic<float>, NUM_SPEC> spectrumData {};
 
+    // Message thread only (editor timer): runs the FFT on the latest frame
+    // handed over by the audio thread and updates spectrumData.
+    void computeSpectrum();
+
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -118,14 +122,20 @@ private:
     juce::SmoothedValue<float> attenSmoothed   { 0.0f };
     juce::SmoothedValue<float> micGainSmoothed { 1.0f };
 
+    // Spectrum handoff. The audio thread fills fftAccum, then copies it into
+    // fftFrame when the GUI has consumed the previous frame (fftFrameReady ==
+    // false). The FFT itself runs on the message thread in computeSpectrum().
+    std::array<float, FFT_SIZE> fftAccum {};
+    int fftPos = 0;
+    std::array<float, FFT_SIZE> fftFrame {};
+    std::atomic<bool>  fftFrameReady { false };
+    std::atomic<float> currentSampleRate { 44100.0f };
+
+    // Message thread only
     juce::dsp::FFT fftProcessor { FFT_ORDER };
     juce::dsp::WindowingFunction<float> fftWindow {
         (size_t)FFT_SIZE, juce::dsp::WindowingFunction<float>::hann };
     std::array<float, FFT_SIZE * 2> fftInOut {};
-    std::array<float, FFT_SIZE>     fftAccum {};
-    int fftPos = 0;
-
-    void updateSpectrum();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PerKungFuProcessor)
 };

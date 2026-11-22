@@ -65,6 +65,8 @@ void PerKungFuProcessor::prepareToPlay (double sampleRate, int)
 {
     voice.setSampleRate (static_cast<float> (sampleRate));
     onset.reset();
+    currentSampleRate.store (static_cast<float> (sampleRate));
+    fftPos = 0;
 
     auto initSmoother = [sampleRate] (juce::SmoothedValue<float>& sv, float value)
     {
@@ -138,11 +140,16 @@ void PerKungFuProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         for (int ch = 0; ch < numOut; ++ch)
             buffer.setSample (ch, i, s);
 
-        // 3. Accumulate for FFT spectrum
+        // 3. Accumulate for the FFT spectrum. Hand a full frame to the GUI
+        //    (a plain copy); if it has not consumed the last one, drop this one.
         fftAccum[fftPos++] = s;
         if (fftPos >= FFT_SIZE)
         {
-            updateSpectrum();
+            if (! fftFrameReady.load (std::memory_order_acquire))
+            {
+                std::copy (fftAccum.begin(), fftAccum.end(), fftFrame.begin());
+                fftFrameReady.store (true, std::memory_order_release);
+            }
             fftPos = 0;
         }
     }
@@ -169,17 +176,23 @@ juce::AudioProcessorEditor* PerKungFuProcessor::createEditor()
     return new PerKungFuEditor (*this);
 }
 
-void PerKungFuProcessor::updateSpectrum()
+void PerKungFuProcessor::computeSpectrum()
 {
-    // Copy accumulated samples, zero the second half (imaginary), apply window
-    std::copy (fftAccum.begin(), fftAccum.end(), fftInOut.begin());
+    if (! fftFrameReady.load (std::memory_order_acquire))
+        return; // no new frame since the last tick
+
+    // Take the frame, then release the slot so the audio thread can refill it
+    std::copy (fftFrame.begin(), fftFrame.end(), fftInOut.begin());
+    fftFrameReady.store (false, std::memory_order_release);
+
+    // Zero the second half (imaginary), apply window
     std::fill (fftInOut.begin() + FFT_SIZE, fftInOut.end(), 0.0f);
     fftWindow.multiplyWithWindowingTable (fftInOut.data(), (size_t)FFT_SIZE);
 
     // In-place FFT — magnitudes appear in fftInOut[0..FFT_SIZE/2]
     fftProcessor.performFrequencyOnlyForwardTransform (fftInOut.data());
 
-    float sr    = static_cast<float> (getSampleRate());
+    float sr    = currentSampleRate.load();
     float scale = 2.0f / (float)FFT_SIZE;   // normalise to 0..1 for full-scale
 
     for (int b = 0; b < NUM_SPEC; ++b)

@@ -165,7 +165,9 @@ void PerKungFuEditor::timerCallback()
     webView->evaluateJavascript (
         "if(window.setOutputLevel){window.setOutputLevel(" + juce::String (outLvl, 4) + ");}");
 
-    // Push FFT spectrum (40 log-spaced magnitude bins, 0..1)
+    // Push FFT spectrum (40 log-spaced magnitude bins, 0..1).
+    // The FFT runs here on the message thread, not in processBlock.
+    processorRef.computeSpectrum();
     juce::String specJs = "if(window.setSpectrum){window.setSpectrum([";
     for (int i = 0; i < PerKungFuProcessor::NUM_SPEC; ++i)
     {

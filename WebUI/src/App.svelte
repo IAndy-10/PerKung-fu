@@ -190,7 +190,7 @@
       <div class="panel pgroup">
         <div class="panel-hd">
           <span class="title">◢ Resonator</span>
-          <span class="meta">String · Karplus-Strong</span>
+          <span class="meta">Membrane · Modal</span>
         </div>
         <div class="pgroup-body">
           <ParamSlider name="Tuning" value={$tuning}
